@@ -266,19 +266,19 @@ than having wording invented for them.
 
 ## 7. Minor inconsistencies (open)
 
-- `uniform bool EveryN < __UNIFORM_SLIDER_FLOAT1 ... >` annotates a boolean with a float-slider
-  annotation (`Shaders/UIDetectMulti.fx:51-55` and the analogous blocks). It appears to work, but the
-  annotation does not describe the value.
-- Naming is inconsistent for slot 1 only: the pixel shaders are `PS_UIDetect` (no suffix),
-  `PS_UIDetectTimerSetup1` and `PS_UIDetectTimer` (suffix on the timer setup, none on the timer),
-  whereas every other slot is uniformly suffixed.
-- `PS_UIDetect` is the only one whose lookup loop omits the leading `if (i == PIXELNUMBER){break;}`;
-  that statement is dead in all five anyway, since the loop already conditions on `i < PIXELNUMBER`.
-- `State_Pixel_Color` draws its readout at hard-coded pixel positions
-  (`DrawText_String(float2(800.0, 100.0), ...)`), so the diagnostic text shifts with resolution.
-- `texture texUIDetectMaskMulti <source="UIDETECTMASKRGBMULTI.png">` is declared
-  `Format=RGBA8` while the shipped images are paletted RGB PNGs; harmless, but the alpha channel of
-  any user-supplied mask is silently ignored.
+1. `uniform bool EveryN < __UNIFORM_SLIDER_FLOAT1 ... >` annotates a boolean with a float-slider
+   annotation (`Shaders/UIDetectMulti.fx:51-55` and the analogous blocks). It appears to work, but the
+   annotation does not describe the value.
+2. Naming is inconsistent for slot 1 only: the pixel shaders are `PS_UIDetect` (no suffix),
+   `PS_UIDetectTimerSetup1` and `PS_UIDetectTimer` (suffix on the timer setup, none on the timer),
+   whereas every other slot is uniformly suffixed.
+3. `PS_UIDetect` is the only one whose lookup loop omits the leading `if (i == PIXELNUMBER){break;}`;
+   that statement is dead in all five anyway, since the loop already conditions on `i < PIXELNUMBER`.
+4. `State_Pixel_Color` draws its readout at hard-coded pixel positions
+   (`DrawText_String(float2(800.0, 100.0), ...)`), so the diagnostic text shifts with resolution.
+5. `texture texUIDetectMaskMulti <source="UIDETECTMASKRGBMULTI.png">` is declared
+   `Format=RGBA8` while the shipped images are paletted RGB PNGs; harmless, but the alpha channel of
+   any user-supplied mask is silently ignored.
 
 ## Not defects
 
