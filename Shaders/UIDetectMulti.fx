@@ -414,7 +414,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 
 #endif
 
-#if (UIDM_MASK_COUNT > 3)
+#if (UIDM_MASK_COUNT > 4)
 	uniform float3 tolerance13 < __UNIFORM_SLIDER_FLOAT3
 		ui_label = "RGB tolerance";
 		ui_category = "Mask 13 Tolerances";
@@ -1230,8 +1230,8 @@ technique UIDetectMulti
 	#if (UIDM_MASK_COUNT > 4)
 		pass {
 			VertexShader = PostProcessVS;
-			PixelShader = PS_UIDetect4;
-			RenderTarget = texUIDetectMulti4;
+			PixelShader = PS_UIDetect5;
+			RenderTarget = texUIDetectMulti5;
 		}
 		pass {
 			VertexShader = PostProcessVS;
