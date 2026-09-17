@@ -705,7 +705,7 @@ float4 PS_UIDetect(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_Ta
 		if (i == PIXELNUMBER){break;}
 	}
 	if (uinumber != -1){
-		for (int i=0; i < 3; i++){
+		for (int i=0; i < 3 && uinumber < PIXELNUMBER; i++){
 			pixelCoord = UIPixelCoord_UINr[uinumber].xy * BUFFER_PIXEL_SIZE;
 			pixelColor = round(tex2D(BackBuffer, float2(pixelCoord)).rgb * 255);
 			uiPixelColor = UIPixelRGB[uinumber].rgb;
@@ -762,7 +762,7 @@ float4 PS_UIDetectTimer(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : 
 			if (UIPixelCoord_UINr[i].z == 4){uinumber = i; break;}
 		}  
 		if (uinumber != -1){
-			for (int i=0; i < 3; i++){
+			for (int i=0; i < 3 && uinumber < PIXELNUMBER; i++){
 				pixelCoord = UIPixelCoord_UINr[uinumber].xy * BUFFER_PIXEL_SIZE;
 				pixelColor = round(tex2D(BackBuffer, float2(pixelCoord)).rgb * 255);
 				uiPixelColor = UIPixelRGB[uinumber].rgb;
@@ -820,7 +820,7 @@ float4 PS_UIDetectTimer(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : 
 			if (UIPixelCoord_UINr[i].z == 7){uinumber = i; break;}
 		}
 		if (uinumber != -1){
-			for (int i=0; i < 3; i++){
+			for (int i=0; i < 3 && uinumber < PIXELNUMBER; i++){
 				pixelCoord = UIPixelCoord_UINr[uinumber].xy * BUFFER_PIXEL_SIZE;
 				pixelColor = round(tex2D(BackBuffer, float2(pixelCoord)).rgb * 255);
 				uiPixelColor = UIPixelRGB[uinumber].rgb;
@@ -878,7 +878,7 @@ float4 PS_UIDetectTimer(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : 
 			if (UIPixelCoord_UINr[i].z == 10){uinumber = i; break;}
 		}
 		if (uinumber != -1){
-			for (int i=0; i < 3; i++){
+			for (int i=0; i < 3 && uinumber < PIXELNUMBER; i++){
 				pixelCoord = UIPixelCoord_UINr[uinumber].xy * BUFFER_PIXEL_SIZE;
 				pixelColor = round(tex2D(BackBuffer, float2(pixelCoord)).rgb * 255);
 				uiPixelColor = UIPixelRGB[uinumber].rgb;
@@ -936,7 +936,7 @@ float4 PS_UIDetectTimer(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : 
 			if (UIPixelCoord_UINr[i].z == 13){uinumber = i; break;}
 		}
 		if (uinumber != -1){
-			for (int i=0; i < 3; i++){
+			for (int i=0; i < 3 && uinumber < PIXELNUMBER; i++){
 				pixelCoord = UIPixelCoord_UINr[uinumber].xy * BUFFER_PIXEL_SIZE;
 				pixelColor = round(tex2D(BackBuffer, float2(pixelCoord)).rgb * 255);
 				uiPixelColor = UIPixelRGB[uinumber].rgb;

@@ -15,7 +15,7 @@ runtime verification was possible: the shaders only compile inside ReShade in-ga
 
 | # | Finding | Severity | Status |
 | --- | --- | --- | --- |
-| 1 | Out-of-bounds array read in every `PS_UIDetectN` inner loop | Latent, undefined behaviour | Open — reported only |
+| 1 | Out-of-bounds array read in every `PS_UIDetectN` inner loop | Latent, undefined behaviour | Fixed |
 | 2 | A tolerance of 0 makes its UI element permanently undetectable | Minor, latent | Open — reported only |
 | 3 | `PS_Antibloom` ignores `UIDM_INVERT`, unlike `PS_RestoreColor` | Minor | Open — reported only |
 | 4 | All shipped mask PNGs were blank white placeholders | Blocking for the feature | Fixed |
@@ -23,9 +23,9 @@ runtime verification was possible: the shaders only compile inside ReShade in-ga
 | 6 | `README.md` describes features and a mask count that no longer exist | Documentation | Open |
 | 7 | Misc annotation, naming and dead-code inconsistencies | Cosmetic | Open |
 
-## 1. Out-of-bounds array read in `PS_UIDetectN` (open)
+## 1. Out-of-bounds array read in `PS_UIDetectN` (fixed)
 
-In all five `PS_UIDetectN` functions the inner loop is shaped like this
+In all five `PS_UIDetectN` functions the inner loop was shaped like this
 (`PS_UIDetect` at `Shaders/UIDetectMulti.fx:708-724`, the pattern repeats for masks 2-5):
 
 ```hlsl
@@ -54,15 +54,20 @@ hypothetical — the checked-in configuration (`PIXELNUMBER 11`, UINr 10 as the 
 `PS_UIDetect4` read index 11, and the original single-entry default (`PIXELNUMBER 1`, one entry) makes
 `PS_UIDetect` read index 1.
 
-Simulated traces for the current tables (iterations shown as `(i, uinumber)`):
+Simulated traces for the current tables (iterations shown as `(i, uinumber)`; the index is read at
+the top of the iteration, before any break check):
 
-| Function | Entries scanned | Trace | Max index | Array size 11 |
+| Function | UINr | Iterations before the fix | Iterations after the fix | Out-of-range read |
 | --- | --- | --- | --- | --- |
-| `PS_UIDetect` (UINr 1) | 3 | `(0,0) (1,1) (2,2)` | 2 | in bounds |
-| `PS_UIDetect2` (UINr 4) | 3 | `(0,3) (1,4) (2,5)` | 5 | in bounds |
-| `PS_UIDetect3` (UINr 7) | 4 | `(0,6) (0,7) (1,8) (2,9)` | 9 | in bounds |
-| `PS_UIDetect4` (UINr 10) | 1 | `(0,10) (1,11)` | 11 | **out of bounds** |
-| `PS_UIDetect5` (UINr 13) | 0 | — | — | no entry, loop not entered |
+| `PS_UIDetect` | 1 | `(0,0) (1,1) (2,2)` | unchanged | none |
+| `PS_UIDetect2` | 4 | `(0,3) (1,4) (2,5)` | unchanged | none |
+| `PS_UIDetect3` | 7 | `(0,6) (0,7) (1,8) (2,9)` | unchanged | none |
+| `PS_UIDetect4` | 10 | `(0,10) (1,11)` | `(0,10)` | index 11, one past the 11 entries |
+| `PS_UIDetect5` | 13 | — | — | no entry, loop never entered |
+
+Those traces assume the checked-in tables (`PIXELNUMBER 11`, UINr 1-10 with UINr 7 on two rows). The
+original single-entry default (`PIXELNUMBER 1`, one entry) had the same defect in `PS_UIDetect`: the
+old loop read indices `0` and `1` for a one-element array.
 
 Practical impact is usually nil: the out-of-range read tends to return zeros, and the subsequent
 `UIPixelCoord_UINr[uinumber].z == <UINr>` condition then fails and rejects it. It remains genuinely
@@ -70,15 +75,29 @@ undefined behaviour, and it is exactly the code path the earlier commits
 (`6a5c107 -Fixed incorrect PIXELNUMBER value errors (again >.>)`, which moved this guard from `i` to
 `uinumber`) have already had trouble with.
 
-Suggested fix — bound the loop on both counters:
+Fix applied — all five loops are now bounded on both counters:
 
 ```hlsl
 for (int i=0; i < 3 && uinumber < PIXELNUMBER; i++){
 ```
 
-The `i -= 1` retry must be kept as is: it deliberately re-runs an iteration until every entry sharing
-one `UINr` has been consumed, which is how multi-colour detection works. With the extra bound, every
-index provably stays within `0 .. PIXELNUMBER-1` while the retry behaviour is unchanged.
+The `i -= 1` retry is deliberately kept: it re-runs an iteration until every entry sharing one `UINr`
+has been consumed, which is how multi-colour detection works. With the extra bound every index
+provably stays within `0 .. PIXELNUMBER-1`, and re-running the traces above produces the same number
+of iterations and the same matched colours as before — the only behaviour change is that the final
+iteration can no longer read past the end of the array.
+
+Verified by simulating the loop body for every UI number across 23 table configurations (1-15 unique
+ascending entries, repeated UINrs at the start, middle, end and as the only entry, and the two
+checked-in tables): the fixed loop never indexes outside `0 .. PIXELNUMBER-1`, the number of matching
+iterations is identical before and after, and the only iterations that disappear are exactly those
+that read past the end — one in `PS_UIDetect4` and one in `PS_UIDetect`, none anywhere else. The
+documented multi-colour case (UINr 7 on two consecutive rows) still consumes both rows, 2 matches in
+both variants.
+
+The in-loop `if (uinumber == PIXELNUMBER){break;}` is now unreachable, because the loop condition
+rejects that index before the body runs. It was left in place rather than removed, since deleting it
+would be a cosmetic change with no effect on behaviour.
 
 ## 2. Zero tolerance is a dead state (open)
 
