@@ -121,6 +121,9 @@ Nothing here is testable automatically, so verification is manual and review-bas
   capture is the next best thing.
 - Set `UIDM_DIAGNOSTICS` to 1 to get the in-game crosshair, pixel coordinate sliders and live RGB
   readout for calibrating pixels; it must be `0` in anything shipped.
+- `State_Pixel_Color` is inside `#if (UIDM_DIAGNOSTICS == 1)` and positions its readout in absolute
+  render-target pixels (that is what `DrawText_String`'s `pos`/`size` mean), so it scales the layout by
+  `BUFFER_HEIGHT / 1080.0`. Keep any overlay anchored to the buffer size the same way.
 - Known open issues are listed in `docs/review.md`; check whether your change touches one, and update
   that document rather than `AGENTS.md` when a finding is fixed or a new one is confirmed.
 

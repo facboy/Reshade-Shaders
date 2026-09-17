@@ -21,7 +21,7 @@ runtime verification was possible: the shaders only compile inside ReShade in-ga
 | 4 | All shipped mask PNGs were blank white placeholders | Blocking for the feature | Fixed |
 | 5 | Mask 5 uniform guard and technique pass referenced the wrong slot | Functional bug | Fixed |
 | 6 | `README.md` describes features and a mask count that no longer exist | Documentation | Fixed |
-| 7 | Misc annotation, naming and dead-code inconsistencies | Cosmetic | Partly fixed — 7.1-7.3 done |
+| 7 | Misc annotation, naming and dead-code inconsistencies | Cosmetic | Partly fixed — 7.1-7.4 and 7.6 done |
 
 ## 1. Out-of-bounds array read in `PS_UIDetectN` (fixed)
 
@@ -303,11 +303,34 @@ than having wording invented for them.
    `for (int i=0; i < PIXELNUMBER; i++)`; that one was removed as well, which also makes the five
    entry-search loops uniform. `PS_UIDetect5` turned out never to have had the second guard, so the
    count was five pixel-comparison guards plus four entry-search guards, not ten.
-4. `State_Pixel_Color` draws its readout at hard-coded pixel positions
-   (`DrawText_String(float2(800.0, 100.0), ...)`), so the diagnostic text shifts with resolution.
+4. *(fixed)* `State_Pixel_Color` drew its readout at hard-coded pixel positions, so the diagnostic text
+   shifted with resolution. `DrawText_String`'s `pos` and `size` arguments are absolute render-target
+   pixels — the macro computes `uv = (tex * float2(BUFFER_WIDTH, BUFFER_HEIGHT) - pos) / size` — so the
+   readout sat at 42% across a 1920-wide buffer but 31% of 2560 and 21% of 3840, with the glyphs
+   shrinking accordingly, and vanished entirely below an 800 px wide or ~170 px tall buffer. The layout
+   was authored for 1080p, so it is now scaled by the vertical resolution:
+
+   ```hlsl
+   float uiScale = BUFFER_HEIGHT / 1080.0;
+   float2 textPos = float2(800.0, 100.0) * uiScale;
+   float textSize = 50.0 * uiScale;
+   float textStep = 34.0 * uiScale;
+   ```
+
+   with the three calls moved to `textPos`, `textPos + float2(0.0, textStep)` and
+   `textPos + float2(0.0, textStep * 2.0)`. Scaling by `BUFFER_HEIGHT` rather than width keeps the
+   glyph cell (`size` spans the vertical axis) proportional in both directions, and the original 34 px
+   line advance was scaled rather than switched to `DrawText_Shift`, which advances by a full `size`
+   (50 px) and would have changed the shipped line spacing.
 5. `texture texUIDetectMaskMulti <source="UIDETECTMASKRGBMULTI.png">` is declared
    `Format=RGBA8` while the shipped images are paletted RGB PNGs; harmless, but the alpha channel of
    any user-supplied mask is silently ignored.
+6. *(fixed)* `State_Pixel_Color` declared `float res;` without a value and then used it as the
+   accumulator that `DrawText_String` performs `output += text;` on, before `return res;`. Every pixel
+   of the pass therefore read an uninitialised variable, so the pass was formally undefined at every
+   pixel it wrote — outside the glyphs, where `text` is 0, it returned whatever happened to be in the
+   register. It worked only because the compiler started the register at zero. Fixed as
+   `float res = 0.0;`, in the same edit as 7.4.
 
 ## Not defects
 

@@ -605,7 +605,12 @@ sampler UIDetectTimer { Texture = texUIDetectTimer; };
 #if (UIDM_DIAGNOSTICS == 1)
 	float4 State_Pixel_Color(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_Target
 	{
-		float res;
+		float res = 0.0;
+		//Layout was authored for 1080p, scale it so the readout keeps its place and size at other resolutions
+		float uiScale = BUFFER_HEIGHT / 1080.0;
+		float2 textPos = float2(800.0, 100.0) * uiScale;
+		float textSize = 50.0 * uiScale;
+		float textStep = 34.0 * uiScale;
 		
 		float2 pixelCoord = float2(fPixelPosX, fPixelPosY) * BUFFER_PIXEL_SIZE;
 		float3 pixelColor = round(tex2D(BackBuffer, pixelCoord).rgb * 255);
@@ -627,9 +632,9 @@ sampler UIDetectTimer { Texture = texUIDetectTimer; };
 		int line0[10]  = { __R, __E, __D, __Colon, __Space, __Space, __Space, Red3 + 16, Red2 + 16, Red1 + 16 }; //Red
 		int line1[10]  = { __G, __R, __E, __E, __N, __Colon, __Space, Green3 + 16, Green2 + 16, Green1 + 16 }; //Green
 		int line2[10]  = { __B, __L, __U, __E, __Colon, __Space, __Space, Blue3 + 16, Blue2 + 16, Blue1 + 16 }; //Blue
-		DrawText_String(float2(800.0 , 100.0), 50, 1, texcoord,  line0, 10, res);
-		DrawText_String(float2(800.0 , 134.0), 50, 1, texcoord,  line1, 10, res);
-		DrawText_String(float2(800.0 , 168.0), 50, 1, texcoord,  line2, 10, res);
+		DrawText_String(textPos, textSize, 1, texcoord,  line0, 10, res);
+		DrawText_String(textPos + float2(0.0, textStep), textSize, 1, texcoord,  line1, 10, res);
+		DrawText_String(textPos + float2(0.0, textStep * 2.0), textSize, 1, texcoord,  line2, 10, res);
 		return res;
 	}
 	
