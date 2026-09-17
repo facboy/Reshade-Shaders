@@ -40,6 +40,8 @@ never vendor ReShade's own headers.
 - Per element there are four uniforms: `toleranceN` (RGB), `FAN` (frames to activate),
   `FDN` (frames to deactivate), `EveryN`. The `toleranceN` sliders start at `ui_min = 1` on purpose:
   detection tests `diff < tolerance`, so a floor of 0 would make the element impossible to detect.
+- `EveryN` is a `bool`, so it carries the matching `__UNIFORM_SLIDER_BOOL1` annotation; the float
+  uniforms use `__UNIFORM_SLIDER_FLOAT1`/`_FLOAT3`. Keep the annotation and the declared type in step.
 - An element may have **several** entries sharing one `UINr`, which is how a pixel whose colour
   changes is handled: the list is scanned until every entry of that UI number has been consumed, and
   the element counts as detected if any single colour matches. Placeholder rows written as
@@ -98,7 +100,9 @@ same slot number as the guard.
   `UIDetectMulti.fx` and `README.md` are LF. Do not let an editor normalize them.
 - Follow the naming scheme: `toleranceN`, `FAN`, `FDN`, `EveryN`, `PS_UIDetectN`,
   `PS_UIDetectTimerN`, `PS_UIDetectTimerSetupN`, `texUIDetectMultiN`, `texUIDetectTimerN`,
-  `UIDetectMaskMultiN`, `FTDN`.
+  `UIDetectMaskMultiN`, `FTDN`. Slot 1 is suffixed like every other slot (`PS_UIDetect1`,
+  `PS_UIDetectTimer1`); the three technique names and `UIDetectSetup` deliberately are not, because
+  users see them in ReShade and `README.md` refers to them.
 - Shader code comments are sparse, short and in English (`//UINr 13`). Match that; do not add
   tutorial-style narration to the HLSL.
 - Update `README.md` in the same conversational, non-programmer voice whenever a feature it describes

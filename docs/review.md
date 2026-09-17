@@ -21,12 +21,12 @@ runtime verification was possible: the shaders only compile inside ReShade in-ga
 | 4 | All shipped mask PNGs were blank white placeholders | Blocking for the feature | Fixed |
 | 5 | Mask 5 uniform guard and technique pass referenced the wrong slot | Functional bug | Fixed |
 | 6 | `README.md` describes features and a mask count that no longer exist | Documentation | Fixed |
-| 7 | Misc annotation, naming and dead-code inconsistencies | Cosmetic | Open |
+| 7 | Misc annotation, naming and dead-code inconsistencies | Cosmetic | Partly fixed — 7.1 and 7.2 done |
 
 ## 1. Out-of-bounds array read in `PS_UIDetectN` (fixed)
 
 In all five `PS_UIDetectN` functions the inner loop was shaped like this
-(`PS_UIDetect` at `Shaders/UIDetectMulti.fx:708-724`, the pattern repeats for masks 2-5):
+(`PS_UIDetect1` at `Shaders/UIDetectMulti.fx:707-723`, the pattern repeats for masks 2-5):
 
 ```hlsl
 for (int i=0; i < 3; i++){
@@ -52,21 +52,21 @@ Two things combine badly:
 Result: the final iteration always indexes `PIXELNUMBER`, one past the last valid element. This is not
 hypothetical — the checked-in configuration (`PIXELNUMBER 11`, UINr 10 as the last entry) makes
 `PS_UIDetect4` read index 11, and the original single-entry default (`PIXELNUMBER 1`, one entry) makes
-`PS_UIDetect` read index 1.
+`PS_UIDetect1` read index 1.
 
 Simulated traces for the current tables (iterations shown as `(i, uinumber)`; the index is read at
 the top of the iteration, before any break check):
 
 | Function | UINr | Iterations before the fix | Iterations after the fix | Out-of-range read |
 | --- | --- | --- | --- | --- |
-| `PS_UIDetect` | 1 | `(0,0) (1,1) (2,2)` | unchanged | none |
+| `PS_UIDetect1` | 1 | `(0,0) (1,1) (2,2)` | unchanged | none |
 | `PS_UIDetect2` | 4 | `(0,3) (1,4) (2,5)` | unchanged | none |
 | `PS_UIDetect3` | 7 | `(0,6) (0,7) (1,8) (2,9)` | unchanged | none |
 | `PS_UIDetect4` | 10 | `(0,10) (1,11)` | `(0,10)` | index 11, one past the 11 entries |
 | `PS_UIDetect5` | 13 | — | — | no entry, loop never entered |
 
 Those traces assume the checked-in tables (`PIXELNUMBER 11`, UINr 1-10 with UINr 7 on two rows). The
-original single-entry default (`PIXELNUMBER 1`, one entry) had the same defect in `PS_UIDetect`: the
+original single-entry default (`PIXELNUMBER 1`, one entry) had the same defect in `PS_UIDetect1`: the
 old loop read indices `0` and `1` for a one-element array.
 
 Practical impact is usually nil: the out-of-range read tends to return zeros, and the subsequent
@@ -91,7 +91,7 @@ Verified by simulating the loop body for every UI number across 23 table configu
 ascending entries, repeated UINrs at the start, middle, end and as the only entry, and the two
 checked-in tables): the fixed loop never indexes outside `0 .. PIXELNUMBER-1`, the number of matching
 iterations is identical before and after, and the only iterations that disappear are exactly those
-that read past the end — one in `PS_UIDetect4` and one in `PS_UIDetect`, none anywhere else. The
+that read past the end — one in `PS_UIDetect4` and one in `PS_UIDetect1`, none anywhere else. The
 documented multi-colour case (UINr 7 on two consecutive rows) still consumes both rows, 2 matches in
 both variants.
 
@@ -264,15 +264,39 @@ naming convention, and it does not describe inverted mode (`UIDM_INVERT`) or ant
 (`UIDM_ANTIBLOOM`) at all. Neither is described inaccurately, so they were left out of this fix rather
 than having wording invented for them.
 
-## 7. Minor inconsistencies (open)
+## 7. Minor inconsistencies (partly fixed)
 
-1. `uniform bool EveryN < __UNIFORM_SLIDER_FLOAT1 ... >` annotates a boolean with a float-slider
-   annotation (`Shaders/UIDetectMulti.fx:51-55` and the analogous blocks). It appears to work, but the
-   annotation does not describe the value.
-2. Naming is inconsistent for slot 1 only: the pixel shaders are `PS_UIDetect` (no suffix),
-   `PS_UIDetectTimerSetup1` and `PS_UIDetectTimer` (suffix on the timer setup, none on the timer),
-   whereas every other slot is uniformly suffixed.
-3. `PS_UIDetect` is the only one whose lookup loop omits the leading `if (i == PIXELNUMBER){break;}`;
+1. *(fixed)* `uniform bool EveryN < __UNIFORM_SLIDER_FLOAT1 ... >` annotated a boolean with a
+   float-slider annotation (`Shaders/UIDetectMulti.fx:51-55` and the analogous blocks for all fifteen
+   elements). It worked, but the annotation did not describe the value. All fifteen now use
+   `__UNIFORM_SLIDER_BOOL1`:
+
+   ```hlsl
+   uniform bool Every1 < __UNIFORM_SLIDER_BOOL1
+   	ui_label = "Does every pixel needs to be showing to activate?";
+   	ui_category = "Mask 1 Tolerances";
+   	ui_category_closed = true;
+   > = 0;
+   ```
+
+   Verified against the installed ReShade 6.8.0 headers
+   (`DARK SOULS REMASTERED/reshade-shaders/Shaders/ReShadeUI.fxh`), where `__UNIFORM_SLIDER_BOOL1`
+   through `_BOOL4` are the documented boolean variants and are defined as `__UNIFORM_SLIDER_ANY`,
+   i.e. `ui_type = "slider"` on ReShade 4.0.1+ — identical to what the `_FLOAT1` variants they
+   replaced resolve to. So the widget and the stored value are unchanged; only the macro name now
+   matches the declared type.
+
+2. *(fixed)* Naming was inconsistent for slot 1 only: its pixel shaders were `PS_UIDetect` (no
+   suffix) and `PS_UIDetectTimer` (no suffix), while its own timer-setup shader and every other slot
+   were suffixed. Renamed to `PS_UIDetect1` and `PS_UIDetectTimer1`, together with their two pass
+   bindings in technique `UIDetectMulti`. Slot 1's textures and samplers (`texUIDetectMulti`,
+   `texUIDetectTimer`, `texUIDetectMaskMulti` and their samplers) were deliberately left unchanged, as
+   was the `UIDetectTimer` sampler that `PS_UIDetect1` reads: the rename therefore did not touch a
+   single texture lookup, which keeps a purely cosmetic change from altering rendering behaviour. The
+   three technique names (`UIDetectSetup`, `UIDetectMulti_Before`, `UIDetectMulti_After`) and the
+   `UIDetectMulti` technique are user-visible in ReShade and named in `README.md`, so they keep their
+   names as well.
+3. `PS_UIDetect1` is the only one whose lookup loop omits the leading `if (i == PIXELNUMBER){break;}`;
    that statement is dead in all five anyway, since the loop already conditions on `i < PIXELNUMBER`.
 4. `State_Pixel_Color` draws its readout at hard-coded pixel positions
    (`DrawText_String(float2(800.0, 100.0), ...)`), so the diagnostic text shifts with resolution.

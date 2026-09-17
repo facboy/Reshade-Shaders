@@ -48,7 +48,7 @@ uniform float FD1 < __UNIFORM_SLIDER_FLOAT1
 	ui_step = 1;
 > = 1;
 
-uniform bool Every1 < __UNIFORM_SLIDER_FLOAT1
+uniform bool Every1 < __UNIFORM_SLIDER_BOOL1
 	ui_label = "Does every pixel needs to be showing to activate?";
 	ui_category = "Mask 1 Tolerances";
 	ui_category_closed = true;
@@ -80,7 +80,7 @@ uniform float FD2 < __UNIFORM_SLIDER_FLOAT1
 	ui_step = 1;
 > = 1;
 
-uniform bool Every2 < __UNIFORM_SLIDER_FLOAT1
+uniform bool Every2 < __UNIFORM_SLIDER_BOOL1
 	ui_label = "Does every pixel needs to be showing to activate?";
 	ui_category = "Mask 2 Tolerances";
 	ui_category_closed = true;
@@ -112,7 +112,7 @@ uniform float FD3 < __UNIFORM_SLIDER_FLOAT1
 	ui_step = 1;
 > = 1;
 
-uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
+uniform bool Every3 < __UNIFORM_SLIDER_BOOL1
 	ui_label = "Does every pixel needs to be showing to activate?";
 	ui_category = "Mask 3 Tolerances";
 	ui_category_closed = true;
@@ -145,7 +145,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_step = 1;
 	> = 1;
 
-	uniform bool Every4 < __UNIFORM_SLIDER_FLOAT1
+	uniform bool Every4 < __UNIFORM_SLIDER_BOOL1
 		ui_label = "Does every pixel needs to be showing to activate?";
 		ui_category = "Mask 4 Tolerances";
 		ui_category_closed = true;
@@ -177,7 +177,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_step = 1;
 	> = 1;
 
-	uniform bool Every5 < __UNIFORM_SLIDER_FLOAT1
+	uniform bool Every5 < __UNIFORM_SLIDER_BOOL1
 		ui_label = "Does every pixel needs to be showing to activate?";
 		ui_category = "Mask 5 Tolerances";
 		ui_category_closed = true;
@@ -209,7 +209,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_step = 1;
 	> = 1;
 
-	uniform bool Every6 < __UNIFORM_SLIDER_FLOAT1
+	uniform bool Every6 < __UNIFORM_SLIDER_BOOL1
 		ui_label = "Does every pixel needs to be showing to activate?";
 		ui_category = "Mask 6 Tolerances";
 		ui_category_closed = true;
@@ -243,7 +243,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_step = 1;
 	> = 1;
 
-	uniform bool Every7 < __UNIFORM_SLIDER_FLOAT1
+	uniform bool Every7 < __UNIFORM_SLIDER_BOOL1
 		ui_label = "Does every pixel needs to be showing to activate?";
 		ui_category = "Mask 7 Tolerances";
 		ui_category_closed = true;
@@ -275,7 +275,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_step = 1;
 	> = 1;
 
-	uniform bool Every8 < __UNIFORM_SLIDER_FLOAT1
+	uniform bool Every8 < __UNIFORM_SLIDER_BOOL1
 		ui_label = "Does every pixel needs to be showing to activate?";
 		ui_category = "Mask 8 Tolerances";
 		ui_category_closed = true;
@@ -307,7 +307,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_step = 1;
 	> = 1;
 
-	uniform bool Every9 < __UNIFORM_SLIDER_FLOAT1
+	uniform bool Every9 < __UNIFORM_SLIDER_BOOL1
 		ui_label = "Does every pixel needs to be showing to activate?";
 		ui_category = "Mask 9 Tolerances";
 		ui_category_closed = true;
@@ -342,7 +342,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_step = 1;
 	> = 1;
 
-	uniform bool Every10 < __UNIFORM_SLIDER_FLOAT1
+	uniform bool Every10 < __UNIFORM_SLIDER_BOOL1
 		ui_label = "Does every pixel needs to be showing to activate?";
 		ui_category = "Mask 10 Tolerances";
 		ui_category_closed = true;
@@ -374,7 +374,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_step = 1;
 	> = 1;
 
-	uniform bool Every11 < __UNIFORM_SLIDER_FLOAT1
+	uniform bool Every11 < __UNIFORM_SLIDER_BOOL1
 		ui_label = "Does every pixel needs to be showing to activate?";
 		ui_category = "Mask 11 Tolerances";
 		ui_category_closed = true;
@@ -406,7 +406,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_step = 1;
 	> = 1;
 
-	uniform bool Every12 < __UNIFORM_SLIDER_FLOAT1
+	uniform bool Every12 < __UNIFORM_SLIDER_BOOL1
 		ui_label = "Does every pixel needs to be showing to activate?";
 		ui_category = "Mask 12 Tolerances";
 		ui_category_closed = true;
@@ -441,7 +441,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_step = 1;
 	> = 1;
 
-	uniform bool Every13 < __UNIFORM_SLIDER_FLOAT1
+	uniform bool Every13 < __UNIFORM_SLIDER_BOOL1
 		ui_label = "Does every pixel needs to be showing to activate?";
 		ui_category = "Mask 13 Tolerances";
 		ui_category_closed = true;
@@ -473,7 +473,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_step = 1;
 	> = 1;
 
-	uniform bool Every14 < __UNIFORM_SLIDER_FLOAT1
+	uniform bool Every14 < __UNIFORM_SLIDER_BOOL1
 		ui_label = "Does every pixel needs to be showing to activate?";
 		ui_category = "Mask 14 Tolerances";
 		ui_category_closed = true;
@@ -505,7 +505,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_step = 1;
 	> = 1;
 
-	uniform bool Every15 < __UNIFORM_SLIDER_FLOAT1
+	uniform bool Every15 < __UNIFORM_SLIDER_BOOL1
 		ui_label = "Does every pixel needs to be showing to activate?";
 		ui_category = "Mask 15 Tolerances";
 		ui_category_closed = true;
@@ -689,7 +689,7 @@ sampler UIDetectTimer { Texture = texUIDetectTimer; };
 	}
 #endif
 
-float4 PS_UIDetect(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_Target
+float4 PS_UIDetect1(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_Target
 {
 	float3 pixelColor, uiPixelColor, diff;
 	float2 pixelCoord;
@@ -739,7 +739,7 @@ float4 PS_UIDetectTimerSetup1(float4 pos : SV_Position, float2 texcoord : TEXCOO
 	return float4(colorOrig, 1);
 }
 
-float4 PS_UIDetectTimer(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_Target
+float4 PS_UIDetectTimer1(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_Target
 {
 	float3 uicolors = tex2D(UIDetectMulti, float2(0,0)).rgb;
 	return float4(uicolors, 1);
@@ -1183,13 +1183,13 @@ technique UIDetectMulti
 {	
 	pass {
 		VertexShader = PostProcessVS;
-		PixelShader = PS_UIDetect;
+		PixelShader = PS_UIDetect1;
 		RenderTarget = texUIDetectMulti;
 	}
 	
 	pass {
 		VertexShader = PostProcessVS;
-		PixelShader = PS_UIDetectTimer;
+		PixelShader = PS_UIDetectTimer1;
 		RenderTarget = texUIDetectTimer;
 	}
 	
