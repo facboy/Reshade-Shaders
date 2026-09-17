@@ -19,6 +19,7 @@ Author: Kaiser. Version 1.6.0, based on work from Brussels1. Licensed CC BY 4.0 
 | `Shaders/Reshade overall effect.fx` | Tiny helper effect that stores the back buffer before effects and blends it back after, with an `Intensity` slider. |
 | `Textures/UIDetectMaskRGBMulti*.png` | Mask images, one per mask slot. Masks 1–4 are the real 2560x1440 masks authored for Dark Souls Remastered; `UIDetectMaskRGBMulti5.png` is an unused 1920x1080 pure-white placeholder. |
 | `README.md` | End-user guide: placement order, how to author masks, how to pick pixels. |
+| `docs/review.md` | Code review of the shader pack — findings, evidence and open issues. Read it before changing the shader logic. |
 
 There is **no build system, no dependency manifest, no test suite and no CI**. Shaders are compiled by
 ReShade at runtime; `ReShade.fxh`, `ReShadeUI.fxh` and `DrawText.fxh` are supplied by the ReShade
@@ -118,28 +119,8 @@ Nothing here is testable automatically, so verification is manual and review-bas
   capture is the next best thing.
 - Set `UIDM_DIAGNOSTICS` to 1 to get the in-game crosshair, pixel coordinate sliders and live RGB
   readout for calibrating pixels; it must be `0` in anything shipped.
-
-## Known latent issues (reviewed, deliberately not fixed)
-
-These were found by reading the shader and simulating its indexing logic. None of them are visible in
-the checked-in configuration, so they are recorded here rather than patched:
-
-- **Out-of-bounds array read.** In every `PS_UIDetectN`, the inner `for (int i=0; i < 3; i++)` loop
-  tests `if (uinumber == PIXELNUMBER){break;}` only *after* it has read
-  `UIPixelCoord_UINr[uinumber]` and `UIPixelRGB[uinumber]`. Because the loop advances `uinumber` past
-  the last entry, the final iteration indexes `PIXELNUMBER`. The default one-entry configuration
-  already does this, and so does any configuration where the searched-for UI number is the last entry
-  (e.g. UINr 10 with `PIXELNUMBER 11`). The out-of-range read usually yields zeros and the `.z ==`
-  guard rejects it, so the visible effect is normally nil, but the access is genuinely undefined.
-  A bound such as `i < 3 && uinumber < PIXELNUMBER` would fix it, provided the `i -= 1` retry for
-  repeated UI numbers is kept — the retry intentionally re-runs an iteration until it has consumed
-  every entry sharing one UI number.
-- **Zero tolerance is a dead state.** The tolerance sliders use `ui_min = 0`, but the shader tests
-  `diff.r < tolerance.r`, which can never hold for a value of 0. A tolerance of 0 therefore makes
-  that UI element permanently undetectable instead of making detection exact.
-- **`PS_Antibloom` ignores `UIDM_INVERT`.** `PS_RestoreColor` swaps `color`/`colorOrig` when
-  `UIDM_INVERT == 1`, but `PS_Antibloom` always uses the non-inverted assignment, so inverted mode
-  combined with `UIDM_ANTIBLOOM = 1` is inconsistent.
+- Known open issues are listed in `docs/review.md`; check whether your change touches one, and update
+  that document rather than `AGENTS.md` when a finding is fixed or a new one is confirmed.
 
 ## Repository rules
 
