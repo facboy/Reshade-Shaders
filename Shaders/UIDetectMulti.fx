@@ -702,7 +702,6 @@ float4 PS_UIDetect1(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_T
 
 	for (int i=0; i < PIXELNUMBER; i++){
 		if (UIPixelCoord_UINr[i].z == 1){uinumber = i; break;}
-		if (i == PIXELNUMBER){break;}
 	}
 	if (uinumber != -1){
 		for (int i=0; i < 3 && uinumber < PIXELNUMBER; i++){
@@ -716,7 +715,6 @@ float4 PS_UIDetect1(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_T
 			if (Every1 == 1 && diff.r > tolerance1.r && diff.g > tolerance1.g && diff.b > tolerance1.b && UIPixelCoord_UINr[uinumber].z == 1) uiDetected.x = 0;
 			if (Every2 == 1 && diff.r > tolerance2.r && diff.g > tolerance2.g && diff.b > tolerance2.b && UIPixelCoord_UINr[uinumber].z == 2) uiDetected.y = 0;
 			if (Every3 == 1 && diff.r > tolerance3.r && diff.g > tolerance3.g && diff.b > tolerance3.b && UIPixelCoord_UINr[uinumber].z == 3) uiDetected.z = 0;
-			if (uinumber == PIXELNUMBER){break;}
 			if (uinumber < PIXELNUMBER - 1){
 				if (UIPixelCoord_UINr[uinumber].z == UIPixelCoord_UINr[uinumber + 1].z){i -= 1;};
 			}
@@ -758,9 +756,8 @@ float4 PS_UIDetectTimer1(float4 pos : SV_Position, float2 texcoord : TEXCOORD) :
 		float3 uiDetected = float3(Every4, Every5, Every6);
 		
 		for (int i=0; i < PIXELNUMBER; i++){
-			if (i == PIXELNUMBER){break;}
 			if (UIPixelCoord_UINr[i].z == 4){uinumber = i; break;}
-		}  
+		}
 		if (uinumber != -1){
 			for (int i=0; i < 3 && uinumber < PIXELNUMBER; i++){
 				pixelCoord = UIPixelCoord_UINr[uinumber].xy * BUFFER_PIXEL_SIZE;
@@ -773,7 +770,6 @@ float4 PS_UIDetectTimer1(float4 pos : SV_Position, float2 texcoord : TEXCOORD) :
 				if (Every4 == 1 && diff.r > tolerance4.r && diff.g > tolerance4.g && diff.b > tolerance4.b && UIPixelCoord_UINr[uinumber].z == 4) uiDetected.x = 0;
 				if (Every5 == 1 && diff.r > tolerance5.r && diff.g > tolerance5.g && diff.b > tolerance5.b && UIPixelCoord_UINr[uinumber].z == 5) uiDetected.y = 0;
 				if (Every6 == 1 && diff.r > tolerance6.r && diff.g > tolerance6.g && diff.b > tolerance6.b && UIPixelCoord_UINr[uinumber].z == 6) uiDetected.z = 0;
-				if (uinumber == PIXELNUMBER){break;}
 				if (uinumber < PIXELNUMBER - 1){
 					if (UIPixelCoord_UINr[uinumber].z == UIPixelCoord_UINr[uinumber + 1].z){i -= 1;};
 				}
@@ -816,7 +812,6 @@ float4 PS_UIDetectTimer1(float4 pos : SV_Position, float2 texcoord : TEXCOORD) :
 		float3 uiDetected = float3(Every7, Every8, Every9);
 	
 		for (int i=0; i < PIXELNUMBER; i++){
-			if (i == PIXELNUMBER){break;}
 			if (UIPixelCoord_UINr[i].z == 7){uinumber = i; break;}
 		}
 		if (uinumber != -1){
@@ -831,7 +826,6 @@ float4 PS_UIDetectTimer1(float4 pos : SV_Position, float2 texcoord : TEXCOORD) :
 				if (Every7 == 1 && diff.r > tolerance7.r && diff.g > tolerance7.g && diff.b > tolerance7.b && UIPixelCoord_UINr[uinumber].z == 7) uiDetected.x = 0;
 				if (Every8 == 1 && diff.r > tolerance8.r && diff.g > tolerance8.g && diff.b > tolerance8.b && UIPixelCoord_UINr[uinumber].z == 8) uiDetected.y = 0;
 				if (Every9 == 1 && diff.r > tolerance9.r && diff.g > tolerance9.g && diff.b > tolerance9.b && UIPixelCoord_UINr[uinumber].z == 9) uiDetected.z = 0;
-				if (uinumber == PIXELNUMBER){break;}
 				if (uinumber < PIXELNUMBER - 1){
 					if (UIPixelCoord_UINr[uinumber].z == UIPixelCoord_UINr[uinumber + 1].z){i -= 1;};
 				}
@@ -874,7 +868,6 @@ float4 PS_UIDetectTimer1(float4 pos : SV_Position, float2 texcoord : TEXCOORD) :
 		float3 uiDetected = float3(Every10, Every11, Every12);
 	
 		for (int i=0; i < PIXELNUMBER; i++){
-			if (i == PIXELNUMBER){break;}
 			if (UIPixelCoord_UINr[i].z == 10){uinumber = i; break;}
 		}
 		if (uinumber != -1){
@@ -889,7 +882,6 @@ float4 PS_UIDetectTimer1(float4 pos : SV_Position, float2 texcoord : TEXCOORD) :
 				if (Every10 == 1 && diff.r > tolerance10.r && diff.g > tolerance10.g && diff.b > tolerance10.b && UIPixelCoord_UINr[uinumber].z == 10) uiDetected.x = 0;
 				if (Every11 == 1 && diff.r > tolerance11.r && diff.g > tolerance11.g && diff.b > tolerance11.b && UIPixelCoord_UINr[uinumber].z == 11) uiDetected.y = 0;
 				if (Every12 == 1 && diff.r > tolerance12.r && diff.g > tolerance12.g && diff.b > tolerance12.b && UIPixelCoord_UINr[uinumber].z == 12) uiDetected.z = 0;
-				if (uinumber == PIXELNUMBER){break;}
 				if (uinumber < PIXELNUMBER - 1){
 					if (UIPixelCoord_UINr[uinumber].z == UIPixelCoord_UINr[uinumber + 1].z){i -= 1;};
 				}
@@ -932,7 +924,6 @@ float4 PS_UIDetectTimer1(float4 pos : SV_Position, float2 texcoord : TEXCOORD) :
 		float3 uiDetected = float3(Every13, Every14, Every15);
 	
 		for (int i=0; i < PIXELNUMBER; i++){
-			if (i == PIXELNUMBER){break;}
 			if (UIPixelCoord_UINr[i].z == 13){uinumber = i; break;}
 		}
 		if (uinumber != -1){
@@ -947,7 +938,6 @@ float4 PS_UIDetectTimer1(float4 pos : SV_Position, float2 texcoord : TEXCOORD) :
 				if (Every13 == 1 && diff.r > tolerance13.r && diff.g > tolerance13.g && diff.b > tolerance13.b && UIPixelCoord_UINr[uinumber].z == 13) uiDetected.x = 0;
 				if (Every14 == 1 && diff.r > tolerance14.r && diff.g > tolerance14.g && diff.b > tolerance14.b && UIPixelCoord_UINr[uinumber].z == 14) uiDetected.y = 0;
 				if (Every15 == 1 && diff.r > tolerance15.r && diff.g > tolerance15.g && diff.b > tolerance15.b && UIPixelCoord_UINr[uinumber].z == 15) uiDetected.z = 0;
-				if (uinumber == PIXELNUMBER){break;}
 				if (uinumber < PIXELNUMBER - 1){
 					if (UIPixelCoord_UINr[uinumber].z == UIPixelCoord_UINr[uinumber + 1].z){i -= 1;};
 				}

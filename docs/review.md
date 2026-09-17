@@ -21,7 +21,7 @@ runtime verification was possible: the shaders only compile inside ReShade in-ga
 | 4 | All shipped mask PNGs were blank white placeholders | Blocking for the feature | Fixed |
 | 5 | Mask 5 uniform guard and technique pass referenced the wrong slot | Functional bug | Fixed |
 | 6 | `README.md` describes features and a mask count that no longer exist | Documentation | Fixed |
-| 7 | Misc annotation, naming and dead-code inconsistencies | Cosmetic | Partly fixed — 7.1 and 7.2 done |
+| 7 | Misc annotation, naming and dead-code inconsistencies | Cosmetic | Partly fixed — 7.1-7.3 done |
 
 ## 1. Out-of-bounds array read in `PS_UIDetectN` (fixed)
 
@@ -95,9 +95,9 @@ that read past the end — one in `PS_UIDetect4` and one in `PS_UIDetect1`, none
 documented multi-colour case (UINr 7 on two consecutive rows) still consumes both rows, 2 matches in
 both variants.
 
-The in-loop `if (uinumber == PIXELNUMBER){break;}` is now unreachable, because the loop condition
-rejects that index before the body runs. It was left in place rather than removed, since deleting it
-would be a cosmetic change with no effect on behaviour.
+The in-loop `if (uinumber == PIXELNUMBER){break;}` would also be unreachable once the loop is bounded,
+because the loop condition rejects that index before the body runs; it was accordingly removed from all
+five functions as part of 7.3.
 
 ## 2. Zero tolerance is a dead state (fixed)
 
@@ -296,8 +296,13 @@ than having wording invented for them.
    three technique names (`UIDetectSetup`, `UIDetectMulti_Before`, `UIDetectMulti_After`) and the
    `UIDetectMulti` technique are user-visible in ReShade and named in `README.md`, so they keep their
    names as well.
-3. `PS_UIDetect1` is the only one whose lookup loop omits the leading `if (i == PIXELNUMBER){break;}`;
-   that statement is dead in all five anyway, since the loop already conditions on `i < PIXELNUMBER`.
+3. *(fixed)* The `if (uinumber == PIXELNUMBER){break;}` immediately after the pixel comparisons was
+   dead in all five functions: the loop already conditions on `uinumber < PIXELNUMBER`, so the index
+   can never reach `PIXELNUMBER` inside the body. It was removed from all five. `PS_UIDetect1` had a
+   second dead guard of the same kind in its entry-search loop, `if (i == PIXELNUMBER){break;}` inside
+   `for (int i=0; i < PIXELNUMBER; i++)`; that one was removed as well, which also makes the five
+   entry-search loops uniform. `PS_UIDetect5` turned out never to have had the second guard, so the
+   count was five pixel-comparison guards plus four entry-search guards, not ten.
 4. `State_Pixel_Color` draws its readout at hard-coded pixel positions
    (`DrawText_String(float2(800.0, 100.0), ...)`), so the diagnostic text shifts with resolution.
 5. `texture texUIDetectMaskMulti <source="UIDETECTMASKRGBMULTI.png">` is declared
