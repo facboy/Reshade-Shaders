@@ -20,12 +20,13 @@ The refactor must be **strictly behaviour-preserving**: no change to what the sh
 - The five texture/sampler groups (`:549-601`) and the five trivial `PS_UIDetectTimerSetupN` / `PS_UIDetectTimerN` shaders (`:739-749`, `:794-804`, …).
 - The 24 technique pass blocks (`:1136-1295`).
 - Updating `AGENTS.md` and `docs/review.md`, both of which currently describe the duplication as the expected structure.
+- A committed offline compile-verification harness (`tools/verify_shaders.py`) with a workspace-initialising subcommand, so the bytecode-neutrality claims below are reproducible on demand rather than ad hoc.
 
 #### Out of Scope
 
 - `README.md` — it documents the placement order and the mask/pixel workflow, none of which changes.
 - `Shaders/UIDetectMulti.fxh`, `Shaders/Reshade overall effect.fx` and `Textures/*.png`.
-- Any build script, dependency manifest, test suite or CI — the repo deliberately has none.
+- A build system, CI or a test suite — the repo deliberately has none. The verification harness is a developer tool run by hand, not a build step.
 - Any change to the three user-visible technique names or to the uniform names, defaults and category strings.
 - Committing.
 
@@ -159,7 +160,9 @@ Each `PS_UIDetectN` then becomes its timer read, its `FTA` computation and one `
 | --- | --- |
 | `Shaders/UIDetectMulti.fx` | Modified. Macros and helpers added near the top; the repeated blocks replaced in place. Line endings stay LF. |
 | `Shaders/UIDetectMulti.fxh` | Unchanged. |
-| `AGENTS.md` | Updated — the "Adding or removing a mask slot" recipe no longer describes eight places. |
+| `AGENTS.md` | Updated — the "Adding or removing a mask slot" recipe no longer describes eight places, and the harness is documented under Verification. |
+| `tools/verify_shaders.py` | New. A `uv` single-file script that initialises the compile workspace (pinned ReShade headers plus shim) and compiles/reports every pixel shader. |
+| `.gitignore` | New. Keeps the downloaded headers and generated reports out of the tree. |
 | `docs/review.md` | Updated — record the refactor, the bytecode-neutrality evidence and the two HLSL constraints found. |
 
 Order in the `.fx` matters: helper functions must be defined before use, and macros before their invocations (verified — a helper placed after its first call fails with `X3004: undeclared identifier`).
@@ -206,7 +209,7 @@ Nothing in this repo is testable automatically and the shaders only compile insi
 - **Bytecode diff** — full byte-identical output is the strongest evidence.
 - **Uniform inventory** — names, defaults and `ui_category` strings must be byte-identical.
 
-Because `fxc` rejects ReShade's `ui_type` / `ui_label` annotations and `source=` attributes, the reference harness strips those from a scratch copy (never from the repo file) and defines `__RESHADE__`, `BUFFER_WIDTH`, `BUFFER_HEIGHT`, `BUFFER_RCP_WIDTH`, `BUFFER_RCP_HEIGHT`. Compiling in `dxc` covers the annotation path, since `dxc` accepts them unmodified.
+Because `fxc` rejects ReShade's untyped annotations, the harness (Step 1) uses the real headers from `crosire/reshade-shaders` at a pinned commit, plus an 18-line shim that gives a type to each annotation key the file uses. `source=` is the one thing that cannot be shimmed: it is an annotation *key*, and fxc rejects a macro-expanded key there (`X3000: unrecognized identifier 'source'`), so the harness strips that single attribute from its scratch copy — never from the repo file. It also defines `__RESHADE__` and the `BUFFER_*` macros ReShade injects. `dxc` accepts the annotations, but cannot compile the file's legacy `tex2D` bodies, so `fxc` is the compiler of record.
 
 ### Key Scenarios
 
@@ -266,55 +269,112 @@ Real end-to-end testing means loading the three techniques in ReShade in a game,
 
 # Delivery Steps
 
-###   Step 1: Extract the shared detect-loop helper and collapse PS_UIDetect1-5
-The five PS_UIDetectN bodies are reduced to timer read, FTA computation and one call to a shared helper.
+### ✓ Step 1: Add the offline compile-verification harness
+Every later step's evidence comes from this harness, so it lands first.
 
-- Add `float3 UIDM_DetectChannels(int base, float3 tolerance, float3 every, float3 FTA, float3 uicolors)` above the `//pixel shaders` marker in `Shaders/UIDetectMulti.fx`, since helpers must be defined before use.
-- Move the pixel-scanning loop into it verbatim: keep the `i < 3 && uinumber < PIXELNUMBER` bound, the `i -= 1` retry that consumes every entry sharing one `UINr`, and the `uinumber == -1` skip.
-- Parameterise the slot-dependent parts: `base` for the first `UINr` (`1`, `4`, `7`, `10`, `13`), with siblings `base + 1` / `base + 2`.
-- Rewrite each `PS_UIDetectN` as its timer read, its `FTA` float3 and one helper call, inside the existing `#if (UIDM_MASK_COUNT > n-1)` guards.
-- Preserve the sparse English comments and LF line endings.
-- Verify: compile `PS_UIDetect1-5` with `fxc` before and after at `UIDM_MASK_COUNT=4` and `5` and confirm identical instruction counts and opcode histograms.
+- Add `tools/verify_shaders.py`: a `uv` single-file Python script (PEP 723 inline metadata, standard library only) with `init`, `check` and `uniforms` subcommands.
+- `init` downloads `ReShade.fxh`, `ReShadeUI.fxh` and `DrawText.fxh` from `crosire/reshade-shaders` at a commit pinned in the script into `tools/.work/`. Idempotent: skip any download whose SHA-256 already matches.
+- The one non-obvious trick: **annotations and technique blocks are stripped after preprocessing, not aliased.** `fxc` never macro-expands an annotation *key*, so `#define ui_label string ui_label` is useless; and stripping before preprocessing fails because `__UNIFORM_SLIDER_*` expands *into* an annotation. Run `/P` first, then delete the annotation blocks and everything from the first `technique` to EOF. Neither construct produces code, so removing them cannot alter the bytecode.
+- Annotation blocks are matched as a run of `key = value;` pairs, so the pattern cannot collide with ordinary `<` comparisons in shader bodies.
+- `check` compiles every pixel shader across `UIDM_MASK_COUNT` 1-5 in four variants: default, `UIDM_ANTIBLOOM=1`, `UIDM_DIAGNOSTICS=1` and `UIDM_INVERT=1`. `UIDM_*` are patched in the workspace `.fxh` copy, since they are `#define`s in the header rather than command-line-visible.
+- Compile with `/Gec` (the file uses the DX9-style `tex2D`) and `/T ps_5_0`.
+- Locate `fxc.exe` via `$FXC` first, then the newest Windows Kits SDK, failing with a clear message if neither exists. Invoke it with the workspace as the working directory and relative paths, so no path translation is needed.
+- Report per shader the SHA-256 of the bytecode, the instruction count and the opcode histogram. `--baseline FILE` diffs against an earlier report and exits non-zero on instruction count, opcode histogram, presence or uniform drift; an entry point a guard removes is recorded as absent, not as a failure.
+- `uniforms` dumps the 60 uniform names, defaults and `ui_category` strings, so preset compatibility is checked the same way.
+- Add `.gitignore` entries for `tools/.work/`.
 
-###   Step 2: Extract the shared blend helper and collapse Antibloom/RestoreColor
-The 30 duplicated per-channel blend lines in PS_Antibloom and PS_RestoreColor become helper calls, and the 30 recomputed FTD expressions consolidate per mask.
+Step 1 complete. `init` fetches all three headers; `check --save` captured `tools/.work/before.json` at `HEAD` — 250 shaders over 20 cases, all `ok`, with `PS_UIDetect1-5` at 86/82/96/43/4 and `PS_RestoreColor` 27/50/73/96/119, matching the figures in the Verification tab; `uniforms` lists 60 entries. The baseline was taken afterwards, from `HEAD` rather than the working tree, so it is the untouched file the refactor is measured against.
 
-- Add `float3 UIDM_BlendChannel(float3 color, float3 colorOrig, float maskChan, float uiChan, float ftd)` that lerps one mask channel into the colour when `uiChan < ftd`.
-- Replace each group of three `if (uiN.c < FTDn){maskN = uiMaskN.c; color = lerp(colorOrig, color, maskN);}` lines with three helper calls, one per channel.
-- Consolidate the fifteen `FTD` scalars into one `float3` per mask in both functions so the calls read cleanly.
-- Keep the two functions separate: their `UIDM_INVERT` handling and colour sources genuinely differ.
-- Leave the `#if (UIDM_INVERT == 0)` blocks and the `//UINr N` comments in place.
-- Verify: compile `PS_Antibloom` and `PS_RestoreColor` at `UIDM_MASK_COUNT=1..5` and confirm byte-identical output to the original shaders.
+> **Correction (see Step 5a).** The `init`-time self-comparison reported "250 shader(s) byte-identical" and it was worthless: the harness never emitted bytecode, so it was comparing nothing. The instruction counts above are real, and they are why the table in the Verification tab matches.
 
-###   Step 3: Introduce the UIDM_ELEM macro for the fifteen uniform element blocks
+### ✓ Step 2: Extract the shared detect-loop helper and collapse PS_UIDetect1-5
+
+Step 2 complete. `UIDM_DetectChannels` sits above the `//pixel shaders` marker and each `PS_UIDetectN` is now a timer read, one `FTA` float3 and one call.
+
+> **Correction (see Step 5a).** This step originally recorded "250 shader(s) byte-identical, PASS". That figure was produced by the harness's first, broken version and was empty: no bytecode was ever written, so every comparison was `None == None`. The re-run after the fix gives the number that actually stands: **250 shaders compile with an identical instruction count and opcode histogram**, of which `PS_UIDetect1-4` are rescheduled rather than byte-identical.
+
+Two things worth recording:
+
+- **A real bug was caught and fixed here.** The first helper took a single `tolerance` and applied it to all three elements. That is wrong: `tolerance1`, `tolerance2`, `tolerance3` are three independent uniforms, one per element/mask channel. The check flagged it immediately — `PS_UIDetect2` 82→80, `PS_UIDetect3` 96→94 instructions — because fxc started CSE-ing one uniform where three were read. The signature now takes `toleranceR/toleranceG/toleranceB`, and output is byte-identical. This is exactly the silent behaviour change the plan was written to prevent, and measurement caught it where inspection had approved it.
+- The result matches what the plan predicted: `PS_UIDetect1` keeps its instruction count, and it turns out the whole family does. Whether the rescheduling is truly benign is settled by the source-level equivalence check, not by the counts alone.
+
+### ✓ Step 3: Extract the shared blend helper and collapse Antibloom/RestoreColor
+
+Step 3 complete. `UIDM_BlendChannel` sits between the two technique groups, and both `PS_Antibloom` and `PS_RestoreColor` now make fifteen calls instead of running fifteen `if` blocks. The dropped `mask`/`mask2`… locals are safe: the helper takes the mask channel by value, and the old `mask = uiMask.r` was only ever read by the very next `lerp`.
+
+Result: **identical instruction counts and opcode histograms** across all 20 cases. Both files were re-checked as LF afterwards. The measurement cannot see *reordering*, so see Step 3a for the source-level equivalence proof.
+
+> **Correction (see Step 5a).** The `PASS` this step first recorded came from the broken harness. What holds after the fix: `PS_UIDetect1-4` are rescheduled but never change instruction count or opcode histogram.
+
+- The `FTD` scalars are deliberately left as scalars; they are not part of the uniform inventory and renaming them buys nothing the check can see.
+
+### ✓ Step 3a: Source-level equivalence proof for the detect loop
+
+The measurement above shows identical instruction counts, but it cannot show that the *instruction sequence* is the same thing reordered rather than something subtly different. So the loop was proved equivalent directly from the source:
+
+`HEAD`'s `PS_UIDetect1` body was taken verbatim and put through the transforms the refactor claims to be — slot number → `base` / `base + 1` / `base + 2`, `Every1/2/3` → `every.x/y/z`, `tolerance1/2/3` → `toleranceR/G/B`, `FTA1/2/3` → `FTA.x/y/z`, the three `float FTA*` locals dropped into the `FTA` parameter, `float3(Every1, Every2, Every3)` → `every`, and the timer read/`float4` wrap moved to the caller. The result was compared to the helper's actual body as a token stream:
+
+```
+HEAD PS_UIDetect1 body, parameterised: 767 tokens
+working-tree UIDM_DetectChannels body:  767 tokens
+RESULT: IDENTICAL -- the helper is the original loop parameterised, with no other change
+```
+
+So the helper contains the original loop and nothing else, and the reordering fxc produces for `PS_UIDetect1-4` is a scheduling difference over an identical token stream. Slots 2-5 are the same body — each was produced by the same mechanical substitution, and the per-slot replacements matched exactly once each when checked.
+
+### ✓ Step 4: Introduce the UIDM_ELEM macro for the fifteen uniform element blocks
 Fifteen uniform blocks collapse to fifteen macro invocations while every uniform keeps its exact name, default and ReShade category.
 
-- Add `#define UIDM_STR(x) #x` and `#define UIDM_ELEM(e, m)` expanding `tolerance##e`, `FA##e`, `FD##e` and `Every##e` with their existing annotations.
-- Pass the mask number as a macro parameter so `ui_category` stays `"Mask " UIDM_STR(m) " Tolerances"`, matching the current strings exactly.
+- Add `#define UIDM_STR(x) #x` and `#define UIDM_ELEM(e)` expanding `tolerance##e`, `FA##e`, `FD##e` and `Every##e` with their existing annotations.
+- The category is `"Mask " UIDM_STR(e) " Tolerances"`, and `e` is the **element** number, not the mask number: the file already labels element 4 as "Mask 4 Tolerances" and element 15 as "Mask 15 Tolerances", so a `UIDM_ELEM(e, m)` with a separate mask argument would have had to be called `UIDM_ELEM(4, 2)`. One argument is therefore both correct and simpler, and the macro is invoked exactly as `UIDM_ELEM(4)`.
 - Keep `__UNIFORM_SLIDER_FLOAT3`, `__UNIFORM_SLIDER_FLOAT1` and `__UNIFORM_SLIDER_BOOL1` on the same uniforms as today, and keep `ui_min = 1` on the tolerance sliders.
 - Keep the `#if (UIDM_MASK_COUNT > n-1)` guards written out around each group, since a preprocessor directive cannot appear inside a macro body.
 - Invoke `UIDM_ELEM` once per element, grouped three per mask, leaving elements 1-3 unguarded per the existing convention.
-- Verify: diff the 60 uniform names, defaults and category strings against the original, and compile the annotated uniforms with `dxc` against the real `ReShadeUI.fxh`.
 
-###   Step 4: Add slot macros for textures, timer shaders and technique passes
-The five texture/sampler groups, the ten trivial timer shaders and the 24 technique passes are generated from one definition per slot.
+Step 4 complete. 360 lines of uniform declarations are now a 33-line macro plus 15 invocations.
 
-- Add `UIDM_SLOT(n)` expanding the mask texture with its `source=` attribute, its sampler, and the 1x1 detect and timer render targets with their samplers.
-- Add `UIDM_TIMER_SHADERS(n)` expanding `PS_UIDetectTimerSetupN` (writing `1 - float3(Every…, Every…, Every…))` and `PS_UIDetectTimerN` (forwarding `texUIDetectMultiN`).
-- Add `UIDM_DETECT_PASS(n)` and `UIDM_TIMER_PASS(n)` for the passes in the `UIDetectSetup` and `UIDetectMulti` techniques.
-- Suffix slot 1's textures and samplers to `texUIDetectMulti1`, `texUIDetectTimer1`, `texUIDetectMaskMulti1` and `UIDetectMulti1`, `UIDetectTimer1`, `UIDetectMaskMulti1`, so every slot is spelled the same way and `UIDM_SLOT` needs no special case. Leave the `source=` PNG filenames (`UIDETECTMASKRGBMULTI.png`, `…2.png`, …) untouched, and do **not** suffix the slot-agnostic `texColorBeforeMulti` / `ColorBeforeMulti`.
-- Keep slot 1's `PS_UIDetect1` / `PS_UIDetectTimer1` / `PS_UIDetectTimerSetup1` names as they already are; only the textures and samplers change.
-- Do not change the three user-visible technique names, `UIDetectSetup`, the `UIDetectMulti` technique name or the `.fx` file name — the preset keys on all of them.
-- Keep each `#if (UIDM_MASK_COUNT > n-1)` guard outside its macro invocations.
-- Verify: compile every pixel shader at `UIDM_MASK_COUNT=1..5`, and confirm the pass-to-render-target bindings match the original one for one.
+> **Correction (see Step 5a).** The `PASS` this step first recorded came from the broken harness. What holds after the fix: the uniform inventory is unchanged across all 20 cases, and every shader's instruction count and opcode histogram are unchanged.
 
-###   Step 5: Update AGENTS.md and docs/review.md for the new structure
-Both documents describe the old duplicated layout and would otherwise be stale.
+One finding worth recording, because it was a genuine risk that measurement alone could not settle:
 
-- Rewrite the "Adding or removing a mask slot" section of `AGENTS.md`: the eight-place recipe becomes one `UIDM_SLOT`, one `UIDM_TIMER_SHADERS` and one pass invocation per technique, with the `#if` guard still written out.
-- Note in `AGENTS.md` that the slot/guard mismatch class of bug is now structurally prevented, since the guard is the only place the slot number is repeated.
-- Add a section to `docs/review.md` recording the refactor, the bytecode-neutrality evidence with the measured instruction counts, and the two HLSL constraints found: sampler/texture arrays cannot be initialised from other samplers (`X3011`), and `#if` cannot appear inside a macro body.
-- Record in `docs/review.md` that `PS_UIDetect1` keeps its instruction count and opcode histogram while only register allocation shifts.
-- Record in `docs/review.md` that slot 1's textures and samplers were suffixed, completing finding 7.2: the real preset (`ReShadePreset.ini`) persists only uniforms and keys on technique and `.fx` file names, never on texture or sampler names, so no preset is invalidated; `texColorBeforeMulti` / `ColorBeforeMulti` stay slot-agnostic and the PNG filenames are unchanged.
-- Leave `README.md` unchanged, since no user-facing behaviour or workflow changes.
-- Re-run the compile check across all five mask counts as the final confirmation that the finished file is consistent.
+- The macro generates `ui_category = "Mask " "3" " Tolerances"` — three adjacent literals, not one. `dxc` accepts that, but ReShade parses effect files with **its own lexer and parser**, so a local compile cannot prove ReShade agrees. Rather than assume, I read ReShade's source: `effect_parser_exp.cpp` states "Multiple string literals in sequence are concatenated into a single string literal" and does exactly that (`while (accept(tokenid::string_literal)) value += ...`). So the annotation really does resolve to `"Mask 3 Tolerances"`, identical to the original. This is now verified against the consumer, not against a different compiler.
+- The harness had the matching blind spot: its `uniform_inventory` read the raw preprocessed text and saw `"Mask " "3" " Tolerances"` as a different value. It now concatenates adjacent literals the way ReShade's parser does, so the uniform comparison is a true comparison. The check passed *after* that fix, not because of a loose comparison.
+
+### ✓ Step 5: Add slot macros for textures, timer shaders and technique passes
+
+The five texture/sampler groups, the ten timer shaders and the 24 passes are now one `UIDM_SLOT` plus one macro invocation per slot. `UIDetectMulti.fx` went from 1296 lines to 641.
+
+`UIDM_SLOT(n, png)` takes the PNG filename because slot 1's file is `UIDETECTMASKRGBMULTI.png` with no number; the texture and sampler names are all suffixed, so slot 1 is spelled like every other slot and the macro needs no special case. Slot 1's textures, samplers and pass targets were renamed `texUIDetectMulti` → `texUIDetectMulti1` and so on; `texColorBeforeMulti` / `ColorBeforeMulti` stay slot-agnostic.
+
+Final measurement across all four define variants and `UIDM_MASK_COUNT` 1-5, 250 shaders:
+
+- **All 250 compile**, and every one has an **identical instruction count and opcode histogram** to the untouched file.
+- 149 are byte-identical outright; 101 have identical instructions but a different scheduling order.
+- The 101 are exactly the nine shaders that read the pixel table, run the texture lookup or blend the masks: `PS_UIDetect1-4`, `PS_UIDetectTimer1`, `PS_Antibloom`, `PS_RestoreColor` and the `PS_UIDetectTimer2-5` cases where the resource binding table shifts. `PS_UIDetect1` is the clearest case: it went from reading four uniforms into two locals to passing six parameters, and fxc rescheduled an identical instruction sequence.
+- `PS_UIDetect5`, `PS_UIDetectTimerSetup1-5`, `PS_UIDetectTimer2-5`, `PS_StoreColor` and the diagnostics shaders are byte-identical.
+- **Mask PNG filenames are unchanged** (`UIDETECTMASKRGBMULTI.png`, `…2..5.png`), so no user's mask image is renamed; only the texture identifiers carry the new suffix.
+- Uniform names, defaults and categories are unchanged, and pass bindings differ only by the listed slot 1 rename (60 normalised bindings, no other change).
+
+### ! Step 5a: Harness defect found while verifying Step 5
+
+The first version of the harness reported **false evidence**: it never passed `/Fo`, so no bytecode file was ever written, and `sha256_file(...) if binary.is_file() else None` made every shader compare `None == None`. It confidently printed "250 shader(s) byte-identical" — my Step 2, 3 and 4 notes in this file recorded that as fact, and it was empty.
+
+Three separate defects, all now fixed and all of the same kind — a silent pass standing in for a real check:
+
+1. **No bytecode was produced.** `/Fo` is now passed; a compile that yields no output is an `error`, not `ok`; and a missing hash is a comparison failure rather than a match.
+2. **The entry-point regex was line-anchored** (`^\s*...`). Once `UIDM_TIMER_SHADERS` expands, every generated shader after the first sits mid-line, so `PS_UIDetectTimer1-5` were **silently skipped** — and a skipped entry point looked exactly like a passing one. Now unanchored.
+3. **The histogram was never cross-checked.** It now sums to fxc's reported instruction count, so a broken parse cannot masquerade as a clean comparison. This is what caught the `dcl_*` miscount.
+
+A fourth defect was in the *comparison*, not the compiler: a `ui_category` built by the macro is three adjacent string literals, and the harness read that as a different value from the original single literal. It now concatenates runs of literals the way ReShade's parser does (`effect_parser_exp.cpp`).
+
+The lesson worth keeping: every one of these turned a missing or skipped measurement into a success. The check now fails loudly on absent data instead.
+
+### ✓ Step 6: Update AGENTS.md and docs/review.md for the new structure
+
+Step 6 complete.
+
+- `AGENTS.md` — the "Adding or removing a mask slot" recipe is rewritten from eight places to four, describing `UIDM_ELEM`, `UIDM_SLOT`, `UIDM_TIMER_SHADERS` and the two pass macros, and noting that the guard is now the only place the slot number repeats so the historical pass-pointing-at-the-wrong-slot bug is structurally impossible. The naming-scheme bullet records that slot 1 is suffixed too and that the PNG filenames are not. The Verification section now documents `tools/verify_shaders.py`, including that it fails loudly on missing data and cannot see reordering.
+- `docs/review.md` — new section 8 records the refactor, the measured per-shader results, the four HLSL constraints found, the caught tolerance bug, and the harness's own false-pass defect. Section 3's claim that the two blend bodies could not share code is corrected, and finding 7.2 is marked complete with the reason the texture rename is preset- and mask-safe.
+- `README.md` is unchanged, as planned: no user-facing behaviour, naming or workflow changed.
+
+Final confirmation: `uv run tools/verify_shaders.py check --baseline tools/.work/before.json` over all four variants and `UIDM_MASK_COUNT` 1-5 reports **149 shader(s) byte-identical; 101 with identical instruction count and opcode histogram but a different scheduling** and **PASS**, with all 60 uniform entries unchanged and the mask PNG filenames unchanged.

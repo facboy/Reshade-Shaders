@@ -67,29 +67,34 @@ bloom bleeding.
 
 ## Adding or removing a mask slot
 
-Adding mask 5 (the pattern generalizes to any slot) touches **eight places**, all in
-`UIDetectMulti.fx` except the header and the texture:
+Each slot is defined once by macros, so adding mask 5 (the pattern generalizes to any slot) now
+touches **four places**, all in `UIDetectMulti.fx` except the header and the texture:
 
 1. `UIDetectMulti.fxh` — widen the `UIDM_MASK_COUNT` comment range and add the new `UIPixelCoord_UINr`
    / `UIPixelRGB` entries.
-2. Uniform block — `tolerance13/14/15`, `FA13/14/15`, `FD13/14/15`, `Every13/14/15` inside
-   `#if (UIDM_MASK_COUNT > 4)`.
-3. Texture/sampler block — `texUIDetectMaskMulti5` (with `source="UIDETECTMASKRGBMULTI5.png"`),
-   `texUIDetectMulti5`, `texUIDetectTimer5` and their samplers, inside the same guard.
-4. Pixel shaders — `PS_UIDetect5`, `PS_UIDetectTimerSetup5`, `PS_UIDetectTimer5`.
-5. `PS_Antibloom` — `FTD13/14/15` plus the `mask5` blend block.
-6. `PS_RestoreColor` — `FTD13/14/15` plus the `mask5` blend block.
-7. `UIDetectSetup` technique — the pass binding `PS_UIDetectTimerSetup5` → `texUIDetectTimer5`.
-8. `UIDetectMulti` technique — the passes binding `PS_UIDetect5` → `texUIDetectMulti5` and
-   `PS_UIDetectTimer5` → `texUIDetectTimer5`.
+2. Uniform block — inside `#if (UIDM_MASK_COUNT > 4)`, three `UIDM_ELEM(13)`, `UIDM_ELEM(14)`,
+   `UIDM_ELEM(15)` invocations (element number only; the mask label follows from it).
+3. Everything else about the slot comes from one invocation each, under the same guard:
+   - `UIDM_SLOT(5, UIDETECTMASKRGBMULTI5.png)` in the texture/sampler block,
+   - `UIDM_TIMER_SHADERS(5, 13, 14, 15)` in the pixel shader section,
+   - `UIDM_TIMER_PASS(5)` in `UIDetectSetup` and `UIDM_DETECT_PASS(5)` in `UIDetectMulti`,
+   - `PS_UIDetect5` itself, which is a timer read, an `FTA` float3 and one `UIDM_DetectChannels(13, …)`
+     call, plus its three `UIDM_BlendChannel` calls in `PS_Antibloom` and `PS_RestoreColor`.
+4. Drop the matching `Textures/UIDetectMaskRGBMULTI5.png` in place.
 
-Also drop the matching `Textures/UIDetectMaskRGBMulti5.png` in place.
+`UIDM_SLOT` takes the PNG filename as an argument because slot 1's file has no number
+(`UIDETECTMASKRGBMULTI.png`); every texture and sampler identifier is suffixed, slot 1 included.
+The `#if` guard must still be written out around each invocation, because a preprocessor directive
+cannot appear inside a macro body.
 
-The historical bugs in this area were exactly the two easy-to-miss kinds: a guard written as
-`> 3` for the mask 5 block instead of `> 4`, and a pass pointing at `PS_UIDetect4` /
-`texUIDetectMulti4` while sitting under the `> 4` guard. When editing these blocks, always check the
-guard number **and** that the referenced pixel shader / render target / sampler / texture all use the
-same slot number as the guard.
+The historical bugs in this area were a guard written as `> 3` for the mask 5 block instead of `> 4`,
+and a pass pointing at slot 4's shader while under the `> 4` guard. The second kind is now
+**structurally impossible**: `UIDM_DETECT_PASS(5)` cannot reference anything but `PS_UIDetect5` and
+`texUIDetectMulti5`, and the number appears once per invocation rather than five times. The guard is
+the only place the slot number is still repeated, so that is the one thing to check.
+
+`UIDM_DetectChannels` and `UIDM_BlendChannel` are ordinary helper functions, not macros, so the
+runtime logic stays steppable and greppable. HLSL inlines them, so they cost no call.
 
 ## Editing conventions
 
@@ -100,9 +105,11 @@ same slot number as the guard.
   `UIDetectMulti.fx` and `README.md` are LF. Do not let an editor normalize them.
 - Follow the naming scheme: `toleranceN`, `FAN`, `FDN`, `EveryN`, `PS_UIDetectN`,
   `PS_UIDetectTimerN`, `PS_UIDetectTimerSetupN`, `texUIDetectMultiN`, `texUIDetectTimerN`,
-  `UIDetectMaskMultiN`, `FTDN`. Slot 1 is suffixed like every other slot (`PS_UIDetect1`,
-  `PS_UIDetectTimer1`); the three technique names and `UIDetectSetup` deliberately are not, because
-  users see them in ReShade and `README.md` refers to them.
+  `texUIDetectMaskMultiN`, `UIDetectMaskMultiN`, `FTDN`. All of these are suffixed, **slot 1
+  included** (`texUIDetectMulti1`, `UIDetectMulti1`), so the slot macros need no special case. The
+  three technique names, `UIDetectSetup` and the slot-agnostic `texColorBeforeMulti` /
+  `ColorBeforeMulti` deliberately are not suffixed; the `source=` PNG filenames keep their original
+  names (`UIDETECTMASKRGBMULTI.png`), since a user's mask file must not be renamed.
 - Shader code comments are sparse, short and in English (`//UINr 13`). Match that; do not add
   tutorial-style narration to the HLSL.
 - Update `README.md` in the same conversational, non-programmer voice whenever a feature it describes
@@ -110,8 +117,20 @@ same slot number as the guard.
 
 ## Verification
 
-Nothing here is testable automatically, so verification is manual and review-based:
+Nothing here is testable automatically, so verification combines a review pass with an offline
+compile check:
 
+- `uv run tools/verify_shaders.py init` fetches the ReShade headers pinned in the script, then
+  `uv run tools/verify_shaders.py check --baseline tools/.work/before.json` compiles every pixel
+  shader across `UIDM_MASK_COUNT` 1-5 in four define variants and reports instruction counts, opcode
+  histograms and bytecode hashes. It also compares the uniform inventory and the technique pass
+  bindings, and fails if a mask PNG filename changes. Keep its `tools/.work/` output out of commits
+  (already in `.gitignore`).
+  - It **fails loudly on missing data** by design. An earlier version reported a clean pass while
+    emitting no bytecode at all, which is the failure mode to watch for when changing it.
+  - It cannot see *reordering*. Instruction count and opcode histogram are the cost that matters; if
+    you need to prove a rewrite is equivalent rather than merely equal-cost, compare the source
+    token streams as well.
 - Sanity-check every new block with a repository-wide search for the affected symbols
   (`UIDM_MASK_COUNT`, `PS_UIDetectN`, `texUIDetectMultiN`) and confirm the guards and slot numbers
   line up as described above.
