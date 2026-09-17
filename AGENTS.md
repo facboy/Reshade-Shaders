@@ -101,11 +101,8 @@ same slot number as the guard.
   `UIDetectMaskMultiN`, `FTDN`.
 - Shader code comments are sparse, short and in English (`//UINr 13`). Match that; do not add
   tutorial-style narration to the HLSL.
-- `README.md` is written for non-programmers in a conversational tone. Keep that voice when editing
-  it, and update it whenever a feature it describes changes.
-- Known staleness in `README.md`: it still mentions `UIDM_EVERYPIXEL`, which no longer exists — the
-  per-element `EveryN` uniforms replaced it — and it refers to "the other 2-14 masks", a leftover from
-  an earlier layout with more slots. There are 5 masks and 15 UI elements. Do not reintroduce either.
+- Update `README.md` in the same conversational, non-programmer voice whenever a feature it describes
+  changes; it documents the placement order and the mask/pixel workflow users follow.
 
 ## Verification
 

@@ -20,7 +20,7 @@ runtime verification was possible: the shaders only compile inside ReShade in-ga
 | 3 | `PS_Antibloom` ignores `UIDM_INVERT`, unlike `PS_RestoreColor` | Minor | Fixed |
 | 4 | All shipped mask PNGs were blank white placeholders | Blocking for the feature | Fixed |
 | 5 | Mask 5 uniform guard and technique pass referenced the wrong slot | Functional bug | Fixed |
-| 6 | `README.md` describes features and a mask count that no longer exist | Documentation | Open |
+| 6 | `README.md` describes features and a mask count that no longer exist | Documentation | Fixed |
 | 7 | Misc annotation, naming and dead-code inconsistencies | Cosmetic | Open |
 
 ## 1. Out-of-bounds array read in `PS_UIDetectN` (fixed)
@@ -237,13 +237,32 @@ Two copy-paste errors affecting slot 5, both fixed in `0b12b4c`:
 
 Guards and slot numbers now line up for all five slots.
 
-## 6. `README.md` is out of date (open)
+## 6. `README.md` is out of date (fixed)
 
-- It repeatedly tells the reader to set `UIDM_EVERYPIXEL`, which no longer exists — the per-element
+- It repeatedly told the reader to set `UIDM_EVERYPIXEL`, which no longer exists — the per-element
   `EveryN` uniforms replaced it in `78e0ad1` / `fb35dc3`.
-- "For the other 2-14 masks, you just repeat these steps" is a leftover from an earlier layout with
+- "For the other 2-14 masks, you just repeat these steps" was a leftover from an earlier layout with
   more slots. There are 5 masks and 15 UI elements.
-- It documents the workflow but never the current `UIDM_MASK_COUNT` range semantics.
+- It documents the workflow but never mentioned the current `UIDM_MASK_COUNT` range semantics.
+
+Fix applied — the three stale passages were corrected in the document's existing conversational voice,
+with no restructuring:
+
+- The `UIDM_EVERYPIXEL` instruction now refers to that ui element's own "Does every pixel needs to be
+  showing to activate?" toggle, and notes that it lives in the element's mask Tolerances category and
+  is unchecked by default.
+- "For the other 2-14 masks" became "For the other masks, 2 through 5", and the paragraph now explains
+  that `UIDM_MASK_COUNT` has to be raised to the new mask's number, either in `UIDetectMulti.fxh` or
+  straight in the reshade menu next to `UIDM_DIAGNOSTICS`, because higher masks are compiled out.
+- The same paragraph, which tells the reader to write as many `float3`/`float4` rows as there are
+  captured colour values, now also tells them to raise `PIXELNUMBER` to the total number of entries.
+  That step was already implied earlier in the document, but was missing exactly where a reader adding
+  multiple colour rows for one ui element would need it.
+
+Still not covered by `README.md`: it never mentions masks 2-5 each being its own PNG file beyond the
+naming convention, and it does not describe inverted mode (`UIDM_INVERT`) or anti-bloom
+(`UIDM_ANTIBLOOM`) at all. Neither is described inaccurately, so they were left out of this fix rather
+than having wording invented for them.
 
 ## 7. Minor inconsistencies (open)
 
