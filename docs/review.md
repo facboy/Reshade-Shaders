@@ -17,7 +17,7 @@ runtime verification was possible: the shaders only compile inside ReShade in-ga
 | --- | --- | --- | --- |
 | 1 | Out-of-bounds array read in every `PS_UIDetectN` inner loop | Latent, undefined behaviour | Fixed |
 | 2 | A tolerance of 0 makes its UI element permanently undetectable | Minor, latent | Fixed |
-| 3 | `PS_Antibloom` ignores `UIDM_INVERT`, unlike `PS_RestoreColor` | Minor | Open — reported only |
+| 3 | `PS_Antibloom` ignores `UIDM_INVERT`, unlike `PS_RestoreColor` | Minor | Fixed |
 | 4 | All shipped mask PNGs were blank white placeholders | Blocking for the feature | Fixed |
 | 5 | Mask 5 uniform guard and technique pass referenced the wrong slot | Functional bug | Fixed |
 | 6 | `README.md` describes features and a mask count that no longer exist | Documentation | Open |
@@ -139,7 +139,7 @@ Only the fifteen `toleranceN` sliders were touched. `ui_min = 0; ui_max = 255;` 
 crosshair colour for the diagnostics overlay; its value is never compared against a distance, so it
 is not affected by this defect and was left as is.
 
-## 3. `PS_Antibloom` ignores `UIDM_INVERT` (open)
+## 3. `PS_Antibloom` ignores `UIDM_INVERT` (fixed)
 
 `PS_RestoreColor` honours inverted mode by swapping the two sources
 (`Shaders/UIDetectMulti.fx:1086-1092`):
@@ -161,9 +161,30 @@ float3 colorOrig = 0;
 float3 color = tex2D(BackBuffer, texcoord).rgb;
 ```
 
-So `UIDM_INVERT = 1` combined with `UIDM_ANTIBLOOM = 1` produces inconsistent compositing between the
-two passes. The two blocks are otherwise near-identical copies of the same mask-blend logic, which is
-also a maintenance hazard: any change to one must be mirrored in the other.
+So `UIDM_INVERT = 1` combined with `UIDM_ANTIBLOOM = 1` produced inconsistent compositing between the
+two passes.
+
+Fix applied — `PS_Antibloom` now swaps its sources the same way `PS_RestoreColor` does:
+
+```hlsl
+		#if (UIDM_INVERT == 0)
+			float3 colorOrig = 0;
+			float3 color = tex2D(BackBuffer, texcoord).rgb;
+		#else
+			float3 color = 0;
+			float3 colorOrig = tex2D(BackBuffer, texcoord).rgb;
+		#endif
+```
+
+That reproduces `PS_RestoreColor`'s pairing exactly while keeping `PS_Antibloom`'s own convention for
+the black side. `PS_RestoreColor` pulls `colorOrig` from `ColorBeforeMulti` and `color` from the back
+buffer in normal mode; `PS_Antibloom` pulls `colorOrig` from a constant black and `color` from the back
+buffer. So in normal mode it reads `lerp(0, backBuffer, mask)` unchanged, and in inverted mode it reads
+`lerp(backBuffer, 0, mask)`, matching the after-pass.
+
+The two blocks are still near-identical copies of the same mask-blend logic, so any further change to
+one must be mirrored in the other. Extracting a shared helper is not possible without restructuring:
+the two functions differ in whether the black side comes from a texture or a constant.
 
 ## 4. Mask assets were blank placeholders (fixed)
 

@@ -1005,8 +1005,13 @@ float4 PS_UIDetectTimer(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : 
 			float FTD14 = 1 / ((FD14 + FA14) / FD14);
 			float FTD15 = 1 / ((FD15 + FA15) / FD15);
 		#endif
-		float3 colorOrig = 0;
-		float3 color = tex2D(BackBuffer, texcoord).rgb;
+		#if (UIDM_INVERT == 0)
+			float3 colorOrig = 0;
+			float3 color = tex2D(BackBuffer, texcoord).rgb;
+		#else
+			float3 color = 0;
+			float3 colorOrig = tex2D(BackBuffer, texcoord).rgb;
+		#endif
 		float3 uiMask = tex2D(UIDetectMaskMulti, texcoord).rgb;
 		float3 mask;
 		float3 ui = tex2D(UIDetectMulti, float2(0,0)).rgb;
