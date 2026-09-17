@@ -21,7 +21,7 @@ runtime verification was possible: the shaders only compile inside ReShade in-ga
 | 4 | All shipped mask PNGs were blank white placeholders | Blocking for the feature | Fixed |
 | 5 | Mask 5 uniform guard and technique pass referenced the wrong slot | Functional bug | Fixed |
 | 6 | `README.md` describes features and a mask count that no longer exist | Documentation | Fixed |
-| 7 | Misc annotation, naming and dead-code inconsistencies | Cosmetic | Partly fixed — 7.1-7.4 and 7.6 done |
+| 7 | Misc annotation, naming and dead-code inconsistencies | Cosmetic | 7.1-7.4 and 7.6 done; 7.5 reclassified as not a defect |
 
 ## 1. Out-of-bounds array read in `PS_UIDetectN` (fixed)
 
@@ -322,9 +322,10 @@ than having wording invented for them.
    glyph cell (`size` spans the vertical axis) proportional in both directions, and the original 34 px
    line advance was scaled rather than switched to `DrawText_Shift`, which advances by a full `size`
    (50 px) and would have changed the shipped line spacing.
-5. `texture texUIDetectMaskMulti <source="UIDETECTMASKRGBMULTI.png">` is declared
-   `Format=RGBA8` while the shipped images are paletted RGB PNGs; harmless, but the alpha channel of
-   any user-supplied mask is silently ignored.
+5. *(reclassified — not a defect)* The mask textures are declared `Format=RGBA8` while the shipped mask
+   images have no alpha channel. Investigated and withdrawn: `RGBA8` is the correct and only possible
+   declaration, and the shader never reads mask alpha. Full reasoning in the Not defects section
+   below.
 6. *(fixed)* `State_Pixel_Color` declared `float res;` without a value and then used it as the
    accumulator that `DrawText_String` performs `output += text;` on, before `return res;`. Every pixel
    of the pass therefore read an uninitialised variable, so the pass was formally undefined at every
@@ -336,6 +337,33 @@ than having wording invented for them.
 
 - `Shaders/Reshade overall effect.fx` is a self-contained before/after blend helper; nothing in it
   depends on `UIDetectMulti` state.
+- **The mask textures being `Format=RGBA8` for images with no alpha channel.** Originally recorded as
+  finding 7.5, withdrawn after investigation.
+
+  `Format` only accepts the formats ReShade defines. The full list, extracted from the installed
+  `dxgi.dll`: `R8`, `RG8`, `RGBA8`, `R16`, `RG16`, `RGBA16`, `R16F`, `RG16F`, `RGBA16F`, `R32F`,
+  `RG32F`, `RGBA32F`, `RGB10A2`. There is **no `RGB8`** and no 24-bit format, so a three-channel mask
+  image can only ever land in an `RGBA8` texture with the fourth channel padded. The sibling
+  `UIMask.fx` handles the same problem the same way, declaring `R8` when it uses one channel and
+  `RGBA8` when it uses all three (`#define TEXFORMAT` at `UIMask.fx:105-109`).
+
+  The alpha channel is also never read: all five mask lookups in `PS_RestoreColor` and `PS_Antibloom`
+  are `.rgb`, and masking is driven by the red/green/blue value alone (`mask = uiMask.r`, where 0
+  means protected), so alpha was never part of the design.
+
+  For the record, the colour types involved:
+
+  | Image | Colour type | Alpha in file | Alpha carries information |
+  | --- | --- | --- | --- |
+  | Original mask, before `ddf5f58` | 6 — RGBA8 | yes | **no** — all 2073600 pixels are alpha 255 |
+  | Blank placeholders from `ddf5f58` | 2 — RGB | no | no |
+  | Current masks 1-4 | 3 — palette, 4/4/1/4-bit, no `tRNS` | no | no |
+  | `UIDetectMaskRGBMulti5.png` | 2 — RGB | no | no |
+
+  So the masks were not originally RGBA-with-meaningful-alpha either; the one RGBA file the repository
+  ever held had a completely uniform alpha channel. The only residue is that a user who authors a mask
+  with deliberately soft, semi-transparent edges will find that ignored, which is why `README.md` now
+  tells the reader to make mask edges hard or blurred instead.
 - `UIDetectSetup` being `hidden = true; timeout = 1` is intentional: the 1x1 timer textures must be
   initialised once with `1 - EveryN` so that a mask starts in the correct state before the first
   detection frame.
