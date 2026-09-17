@@ -38,7 +38,8 @@ never vendor ReShade's own headers.
   Setting it higher than the number of masks that actually have entries costs render targets and
   passes for nothing, so keep it in step with `PIXELNUMBER`.
 - Per element there are four uniforms: `toleranceN` (RGB), `FAN` (frames to activate),
-  `FDN` (frames to deactivate), `EveryN`.
+  `FDN` (frames to deactivate), `EveryN`. The `toleranceN` sliders start at `ui_min = 1` on purpose:
+  detection tests `diff < tolerance`, so a floor of 0 would make the element impossible to detect.
 - An element may have **several** entries sharing one `UINr`, which is how a pixel whose colour
   changes is handled: the list is scanned until every entry of that UI number has been consumed, and
   the element counts as detected if any single colour matches. Placeholder rows written as

@@ -16,7 +16,7 @@ runtime verification was possible: the shaders only compile inside ReShade in-ga
 | # | Finding | Severity | Status |
 | --- | --- | --- | --- |
 | 1 | Out-of-bounds array read in every `PS_UIDetectN` inner loop | Latent, undefined behaviour | Fixed |
-| 2 | A tolerance of 0 makes its UI element permanently undetectable | Minor, latent | Open — reported only |
+| 2 | A tolerance of 0 makes its UI element permanently undetectable | Minor, latent | Fixed |
 | 3 | `PS_Antibloom` ignores `UIDM_INVERT`, unlike `PS_RestoreColor` | Minor | Open — reported only |
 | 4 | All shipped mask PNGs were blank white placeholders | Blocking for the feature | Fixed |
 | 5 | Mask 5 uniform guard and technique pass referenced the wrong slot | Functional bug | Fixed |
@@ -99,7 +99,7 @@ The in-loop `if (uinumber == PIXELNUMBER){break;}` is now unreachable, because t
 rejects that index before the body runs. It was left in place rather than removed, since deleting it
 would be a cosmetic change with no effect on behaviour.
 
-## 2. Zero tolerance is a dead state (open)
+## 2. Zero tolerance is a dead state (fixed)
 
 The tolerance sliders allow 0 (`ui_min = 0; ui_max = 255;`, e.g. `Shaders/UIDetectMulti.fx:25-31`),
 but detection tests a strict inequality:
@@ -110,7 +110,34 @@ if (Every1 == 0 && diff.r < tolerance1.r && diff.g < tolerance1.g && diff.b < to
 
 `diff` is non-negative (`abs(pixelColor - uiPixelColor)`), so `diff.r < 0` can never hold. Setting any
 tolerance to 0 therefore disables detection for that UI element rather than requesting an exact match.
-Either raise `ui_min` to 1 or accept `<=` so that 0 has the intuitive meaning.
+
+Fix applied — all fifteen tolerance sliders were raised to `ui_min = 1`:
+
+```hlsl
+uniform float3 tolerance1 < __UNIFORM_SLIDER_FLOAT3
+	ui_label = "RGB tolerance";
+	ui_category = "Mask 1 Tolerances";
+	ui_category_closed = true;
+	ui_min = 1; ui_max = 255;
+	ui_step = 1;
+> = 1;
+```
+
+The other two options were rejected: changing the comparisons to `<=` would also change behaviour at
+`ui_max` (a tolerance of 255 would then match every possible colour difference, whereas `< 255` still
+rejects a full white-on-black difference), and leaving the slider at 0 while making `0` mean "exact
+match" would keep the control labelled with a value that no longer behaves like a tolerance. Raising
+the slider floor keeps the meaning of every displayed value intact and changes nothing for any
+existing configuration, since all fifteen defaults are 1.
+
+Not covered by this fix: a tolerance that *is* at its maximum, 255, does match every colour except an
+exact opposite (255) difference, so detection becomes effectively unconditional there. That is a
+plausible intent for a slider explicitly set to maximum, and it was left alone.
+
+Only the fifteen `toleranceN` sliders were touched. `ui_min = 0; ui_max = 255;` also appears on
+`CrossColor` (`Shaders/UIDetectMulti.fx:532-538`), a `__UNIFORM_COLOR_FLOAT3` used purely as a
+crosshair colour for the diagnostics overlay; its value is never compared against a distance, so it
+is not affected by this defect and was left as is.
 
 ## 3. `PS_Antibloom` ignores `UIDM_INVERT` (open)
 

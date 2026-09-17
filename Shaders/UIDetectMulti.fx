@@ -26,7 +26,7 @@ uniform float3 tolerance1 < __UNIFORM_SLIDER_FLOAT3
 	ui_label = "RGB tolerance";
 	ui_category = "Mask 1 Tolerances";
 	ui_category_closed = true;
-	ui_min = 0; ui_max = 255;
+	ui_min = 1; ui_max = 255;
 	ui_step = 1;
 > = 1;
 
@@ -58,7 +58,7 @@ uniform float3 tolerance2 < __UNIFORM_SLIDER_FLOAT3
 	ui_label = "RGB tolerance";
 	ui_category = "Mask 2 Tolerances";
 	ui_category_closed = true;
-	ui_min = 0; ui_max = 255;
+	ui_min = 1; ui_max = 255;
 	ui_step = 1;
 > = 1;
 
@@ -90,7 +90,7 @@ uniform float3 tolerance3 < __UNIFORM_SLIDER_FLOAT3
 	ui_label = "RGB tolerance";
 	ui_category = "Mask 3 Tolerances";
 	ui_category_closed = true;
-	ui_min = 0; ui_max = 255;
+	ui_min = 1; ui_max = 255;
 	ui_step = 1;
 > = 1;
 
@@ -123,7 +123,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_label = "RGB tolerance";
 		ui_category = "Mask 4 Tolerances";
 		ui_category_closed = true;
-		ui_min = 0; ui_max = 255;
+		ui_min = 1; ui_max = 255;
 		ui_step = 1;
 	> = 1;
 	
@@ -155,7 +155,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_label = "RGB tolerance";
 		ui_category = "Mask 5 Tolerances";
 		ui_category_closed = true;
-		ui_min = 0; ui_max = 255;
+		ui_min = 1; ui_max = 255;
 		ui_step = 1;
 	> = 1;
 	
@@ -187,7 +187,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_label = "RGB tolerance";
 		ui_category = "Mask 6 Tolerances";
 		ui_category_closed = true;
-		ui_min = 0; ui_max = 255;
+		ui_min = 1; ui_max = 255;
 		ui_step = 1;
 	> = 1;
 	
@@ -221,7 +221,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_label = "RGB tolerance";
 		ui_category = "Mask 7 Tolerances";
 		ui_category_closed = true;
-		ui_min = 0; ui_max = 255;
+		ui_min = 1; ui_max = 255;
 		ui_step = 1;
 	> = 1;
 	
@@ -253,7 +253,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_label = "RGB tolerance";
 		ui_category = "Mask 8 Tolerances";
 		ui_category_closed = true;
-		ui_min = 0; ui_max = 255;
+		ui_min = 1; ui_max = 255;
 		ui_step = 1;
 	> = 1;
 	
@@ -285,7 +285,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_label = "RGB tolerance";
 		ui_category = "Mask 9 Tolerances";
 		ui_category_closed = true;
-		ui_min = 0; ui_max = 255;
+		ui_min = 1; ui_max = 255;
 		ui_step = 1;
 	> = 1;
 	
@@ -320,7 +320,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_label = "RGB tolerance";
 		ui_category = "Mask 10 Tolerances";
 		ui_category_closed = true;
-		ui_min = 0; ui_max = 255;
+		ui_min = 1; ui_max = 255;
 		ui_step = 1;
 	> = 1;
 	
@@ -352,7 +352,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_label = "RGB tolerance";
 		ui_category = "Mask 11 Tolerances";
 		ui_category_closed = true;
-		ui_min = 0; ui_max = 255;
+		ui_min = 1; ui_max = 255;
 		ui_step = 1;
 	> = 1;
 	
@@ -384,7 +384,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_label = "RGB tolerance";
 		ui_category = "Mask 12 Tolerances";
 		ui_category_closed = true;
-		ui_min = 0; ui_max = 255;
+		ui_min = 1; ui_max = 255;
 		ui_step = 1;
 	> = 1;
 	
@@ -419,7 +419,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_label = "RGB tolerance";
 		ui_category = "Mask 13 Tolerances";
 		ui_category_closed = true;
-		ui_min = 0; ui_max = 255;
+		ui_min = 1; ui_max = 255;
 		ui_step = 1;
 	> = 1;
 	
@@ -451,7 +451,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_label = "RGB tolerance";
 		ui_category = "Mask 14 Tolerances";
 		ui_category_closed = true;
-		ui_min = 0; ui_max = 255;
+		ui_min = 1; ui_max = 255;
 		ui_step = 1;
 	> = 1;
 	
@@ -483,7 +483,7 @@ uniform bool Every3 < __UNIFORM_SLIDER_FLOAT1
 		ui_label = "RGB tolerance";
 		ui_category = "Mask 15 Tolerances";
 		ui_category_closed = true;
-		ui_min = 0; ui_max = 255;
+		ui_min = 1; ui_max = 255;
 		ui_step = 1;
 	> = 1;
 	
